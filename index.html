@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniVerde - Estação Industrial 3D</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-primary: #10b981;
+            --color-primary-dark: #059669;
+            --color-primary-light: #34d399;
+            --color-dark: #090d16;
+            --color-gray: #64748b;
+            --bg-glass: rgba(9, 13, 22, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --shadow-glass: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #090d16;
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        /* Top Header & Logo */
+        .header {
+            top: 24px;
+            left: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 14px 22px;
+            border-radius: 20px;
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 12px 40px var(--shadow-glass);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 48px rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .logo-img {
+            max-width: 52px;
+            height: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.2));
+        }
+
+        .brand-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-tagline {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--color-primary-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* Glassmorphism Control Panel */
+        .control-panel {
+            top: 24px;
+            right: 24px;
+            width: 400px;
+            max-height: calc(100vh - 48px);
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 28px;
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 24px 64px var(--shadow-glass);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            overflow-y: auto;
+            color: #f8fafc;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .control-panel:hover {
+            border-color: rgba(16, 185, 129, 0.25);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .panel-section {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 20px;
+        }
+
+        .panel-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .panel-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-subtitle {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 18px;
+        }
+
+        /* Info Display Card */
+        .info-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--color-primary);
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .info-card.active {
+            background: rgba(16, 185, 129, 0.04);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .info-card.active::before {
+            opacity: 1;
+        }
+
+        .info-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--color-primary-light);
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+
+        .info-header {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .info-desc {
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        /* ESG Stats Panel */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-top: 10px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 14px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(16, 185, 129, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .stat-val {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--color-primary-light);
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+        }
+
+        .stat-lbl {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Custom Instructions */
+        .instruction-box {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.5;
+            background: rgba(255, 255, 255, 0.01);
+            padding: 14px;
+            border-radius: 16px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .reset-btn {
+            background: #ffffff;
+            color: var(--color-dark);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .reset-btn:hover {
+            background: var(--color-primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(52, 211, 153, 0.25);
+        }
+
+        .reset-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Tooltip style */
+        .hover-tooltip {
+            position: absolute;
+            background: rgba(9, 13, 22, 0.95);
+            color: #ffffff;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Scrollbar styling for panel */
+        .control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .control-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .control-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        .control-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .control-panel {
+                width: calc(100% - 32px);
+                bottom: 16px;
+                top: auto;
+                left: 16px;
+                right: 16px;
+                max-height: 42vh;
+                padding: 20px;
+                gap: 16px;
+            }
+            .header {
+                top: 16px;
+                left: 16px;
+                padding: 10px 16px;
+            }
+            .brand-name {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="webgl-container"></div>
+    <div id="tooltip" class="hover-tooltip"></div>
+
+    <!-- Header Overlay -->
+    <div class="overlay header interactive">
+        <img src="logo.png" alt="Logo OmniVerde" class="logo-img" onerror="this.style.display='none'">
+        <div class="brand-info">
+            <span class="brand-name">OmniVerde</span>
+            <span class="brand-tagline">Tecnologia Sustentável</span>
+        </div>
+    </div>
+
+    <!-- Right Control Panel -->
+    <div class="overlay control-panel interactive">
+        <div class="panel-section">
+            <h2 class="panel-title">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary-light)"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Estação Industrial
+            </h2>
+            <p class="panel-subtitle">Gêmeo Digital OmniVerde OS v1.0</p>
+            <div class="instruction-box">
+                💡 <b>Navegação Avançada:</b> Rotacione e aproxime para inspecionar os detalhes mecânicos, como os ventiladores ativos, tubulações industriais, resíduos em trânsito e o feixe laser de triagem IA.
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div id="info-card" class="info-card active">
+                <span id="info-tag" class="info-tag">Status Operacional</span>
+                <h3 id="info-header" class="info-header">Monitor da Estação</h3>
+                <p id="info-desc" class="info-desc">Clique nos componentes mecânicos ativos na cena 3D para focar a câmera no setor operacional e ler o relatório técnico de processos da planta.</p>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h4 style="font-size: 0.8rem; font-weight: 700; color: #ffffff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.8px;">Métricas Integradas (ESG)</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-val" id="stat-co2">94.2%</div>
+                    <div class="stat-lbl">Redução CO₂</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="stat-waste">4.8 T</div>
+                    <div class="stat-lbl">Tratamento/Dia</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="stat-energy">89%</div>
+                    <div class="stat-lbl">Autossuficiência</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="stat-recycle">99.1%</div>
+                    <div class="stat-lbl">Reciclagem</div>
+                </div>
+            </div>
+        </div>
+
+        <button class="reset-btn" id="reset-camera-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Visão Geral da Planta
+        </button>
+    </div>
+
+    <!-- CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        // --- CONFIGURAÇÕES DE INTERATIVIDADE E DESCRIÇÕES ---
+        const MODULE_INFO = {
+            'hopper': {
+                tag: 'Módulo de Entrada',
+                title: 'Entrada de Resíduos e Funil',
+                desc: 'Caçamba e tremonha de recepção volumétrica com proteção lateral e grade de segurança superior. A rampa vibratória direciona os resíduos ao contêiner através de dutos reforçados, realizando uma filtragem granulométrica mecânica inicial.',
+                cameraPos: { x: -9.5, y: 4.8, z: 8 },
+                lookAt: { x: -7, y: 1.8, z: 0.5 }
+            },
+            'sorting': {
+                tag: 'Triagem Óptica IA',
+                title: 'Esteira de Classificação Inteligente',
+                desc: 'Esteira rolante de alta velocidade equipada com roletes rolamentados de metal e cabeçote sensor suspenso. Câmeras hiperespectrais de varredura ativa acionam um laser verde oscilante de IA para classificar plásticos, metais e vidro em frações de segundo.',
+                cameraPos: { x: 0, y: 5.5, z: 6.5 },
+                lookAt: { x: 0, y: 4.1, z: 0.2 }
+            },
+            'organic': {
+                tag: 'Fração Orgânica',
+                title: 'Estação de Biodigestão Rápida',
+                desc: 'Processador vertical encamisado em aço com válvulas térmicas e dutos de alívio conectados à parede de exaustão. Converte frações biológicas em adubo orgânico estabilizado de alta qualidade, descarregando-o no saco de estopa texturizado de fibra vegetal.',
+                cameraPos: { x: -2.8, y: 2.8, z: 4.8 },
+                lookAt: { x: -2.5, y: 1.4, z: 0.6 }
+            },
+            'blocks-machine': {
+                tag: 'Compactação de Polímeros',
+                title: 'Prensa Hidráulica Mecânica',
+                desc: 'Compactadora industrial com pistão hidráulico automatizado de ciclo ativo. A prensa desce periodicamente para moldar compostos recicláveis em blocos ecológicos. Equipada com manômetros analógicos de pressão e rampa de descarga.',
+                cameraPos: { x: 2.5, y: 2.8, z: 4.8 },
+                lookAt: { x: 2.5, y: 1.1, z: 0.5 }
+            },
+            'blocks-stack': {
+                tag: 'Logística Verde',
+                title: 'Estoque de Blocos Ecológicos',
+                desc: 'Palete de madeira sustentável contendo blocos ecológicos estruturais prontos para distribuição. Substituem o concreto comum em fundações e pavimentações urbanas, armazenando carbono e reduzindo drasticamente a pegada ecológica de projetos civis.',
+                cameraPos: { x: 5.2, y: 1.8, z: 3.8 },
+                lookAt: { x: 3.9, y: 0.4, z: 1.3 }
+            }
+        };
+
+        // --- CONFIGURAÇÃO SCENE & WEBGL ---
+        const container = document.getElementById('webgl-container');
+        const tooltip = document.getElementById('tooltip');
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0e131f);
+        scene.fog = new THREE.FogExp2(0x0e131f, 0.015);
+
+        // Câmera
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const defaultCamPos = { x: 11, y: 11, z: 18 };
+        const defaultLookAt = { x: 0, y: 2.4, z: 0 };
+        camera.position.set(defaultCamPos.x, defaultCamPos.y, defaultCamPos.z);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        container.appendChild(renderer.domElement);
+
+        // OrbitControls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+        controls.minDistance = 3.5;
+        controls.maxDistance = 35;
+        controls.target.set(defaultLookAt.x, defaultLookAt.y, defaultLookAt.z);
+
+        // --- ILUMINAÇÃO AVANÇADA DE ESTÚDIO INDUSTRIAL ---
+        const ambientLight = new THREE.AmbientLight(0xd1d5db, 0.4);
+        scene.add(ambientLight);
+
+        // Luz do Sol / Principal
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        sunLight.position.set(12, 18, 12);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 40;
+        const d = 16;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0006;
+        scene.add(sunLight);
+
+        // SpotLight 1: Focando o Interior do Contêiner
+        const spot1 = new THREE.SpotLight(0xffffff, 1.8, 15, Math.PI / 4, 0.5, 1);
+        spot1.position.set(-2, 5.8, 1);
+        spot1.target.position.set(-2, 1, 0);
+        spot1.castShadow = true;
+        spot1.shadow.bias = -0.0005;
+        scene.add(spot1);
+        scene.add(spot1.target);
+
+        // SpotLight 2: Focando a Área dos Blocos
+        const spot2 = new THREE.SpotLight(0xa7f3d0, 1.5, 15, Math.PI / 4, 0.5, 1);
+        spot2.position.set(3, 5.8, 1);
+        spot2.target.position.set(3, 1, 0.5);
+        spot2.castShadow = true;
+        scene.add(spot2);
+        scene.add(spot2.target);
+
+        // Luz de Preenchimento Azulada Traseira
+        const backFillLight = new THREE.DirectionalLight(0x3b82f6, 0.35);
+        backFillLight.position.set(-10, 8, -12);
+        scene.add(backFillLight);
+
+
+        // --- CRIANDO TEXTURAS PROCEDIMENTAIS ULTRA-DETALHADAS ---
+        
+        // 1. Textura Normal para Concreto (Ruído/Granulação)
+        function createConcreteNormalTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(256, 256);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                // Gera perturbação de normal para rugosidade
+                const nx = 127 + (Math.random() - 0.5) * 15;
+                const ny = 127 + (Math.random() - 0.5) * 15;
+                const nz = 255;
+                imgData.data[i] = nx;
+                imgData.data[i+1] = ny;
+                imgData.data[i+2] = nz;
+                imgData.data[i+3] = 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(12, 12);
+            return tex;
+        }
+
+        // 2. Textura Normal para o Saco de Estopa (Trama Cruzada)
+        function createBurlapNormalTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#7f7fff'; // Neutro normal map
+            ctx.fillRect(0, 0, 128, 128);
+            
+            // Desenha linhas cruzadas simulando fios de estopa
+            ctx.lineWidth = 1;
+            for(let i = 0; i < 128; i += 4) {
+                // Linhas verticais
+                ctx.strokeStyle = `rgb(${127 + Math.floor(Math.sin(i)*18)}, 127, 255)`;
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 128); ctx.stroke();
+                // Linhas horizontais
+                ctx.strokeStyle = `rgb(127, ${127 + Math.floor(Math.sin(i)*18)}, 255)`;
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(128, i); ctx.stroke();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(3, 3);
+            return tex;
+        }
+
+        const concreteNormal = createConcreteNormalTexture();
+        const burlapNormal = createBurlapNormalTexture();
+
+
+        // --- MATERIAIS ---
+        const colors = {
+            concrete: 0xc8cbd0,
+            frame: 0x1f242e,         // antracite industrial escuro
+            vibrantGreen: 0x10b981,  // verde principal
+            darkGreen: 0x064e3b,     // chassi prensa
+            metalClean: 0xe2e8f0,    // chapa limpa
+            metalMedium: 0x64748b,   // chapa escura
+            copper: 0xd97706,        // tubulação cobre
+            sack: 0x926c44,          // saco estopa
+            block: 0xb5b9bf,         // blocos cinza
+            sensor: 0x090d16
+        };
+
+        const materials = {
+            concrete: new THREE.MeshStandardMaterial({ color: colors.concrete, roughness: 0.8, metalness: 0.15, normalMap: concreteNormal, normalScale: new THREE.Vector2(0.3, 0.3) }),
+            frame: new THREE.MeshStandardMaterial({ color: colors.frame, roughness: 0.35, metalness: 0.5 }),
+            brandGreen: new THREE.MeshStandardMaterial({ color: colors.vibrantGreen, roughness: 0.4, metalness: 0.2, emissive: colors.vibrantGreen, emissiveIntensity: 0.05 }),
+            brandGreenDark: new THREE.MeshStandardMaterial({ color: colors.darkGreen, roughness: 0.45, metalness: 0.35 }),
+            metalClean: new THREE.MeshStandardMaterial({ color: colors.metalClean, roughness: 0.25, metalness: 0.75 }),
+            metalMedium: new THREE.MeshStandardMaterial({ color: colors.metalMedium, roughness: 0.35, metalness: 0.6 }),
+            copperPipe: new THREE.MeshStandardMaterial({ color: colors.copper, roughness: 0.2, metalness: 0.85 }),
+            sack: new THREE.MeshStandardMaterial({ color: colors.sack, roughness: 0.95, metalness: 0.0, normalMap: burlapNormal, normalScale: new THREE.Vector2(0.6, 0.6) }),
+            block: new THREE.MeshStandardMaterial({ color: colors.block, roughness: 0.85, metalness: 0.1, normalMap: concreteNormal, normalScale: new THREE.Vector2(0.2, 0.2) }),
+            woodPallet: new THREE.MeshStandardMaterial({ color: 0xad8b65, roughness: 0.75, metalness: 0.05 }),
+            sensor: new THREE.MeshStandardMaterial({ color: colors.sensor, roughness: 0.15, metalness: 0.85 }),
+            sensorWhite: new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.3, metalness: 0.1 }),
+            ledRed: new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 2.0 }),
+            ledGreen: new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 2.0 }),
+            ironRod: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.25, metalness: 0.8 })
+        };
+
+
+        // --- CONSTRUÇÃO DA CENA 3D ---
+
+        // 1. Chão (Plataforma de Concreto com juntas de dilatação)
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const ground = new THREE.Mesh(groundGeo, materials.concrete);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const gridHelper = new THREE.GridHelper(80, 40, 0x1f2937, 0x374151);
+        gridHelper.position.y = 0.006;
+        scene.add(gridHelper);
+
+        // Grupo Geral
+        const stationGroup = new THREE.Group();
+        scene.add(stationGroup);
+
+        const interactiveMeshes = [];
+
+        function makeInteractive(object, moduleKey) {
+            object.traverse((child) => {
+                if (child.isMesh) {
+                    child.userData.interactive = true;
+                    child.userData.moduleKey = moduleKey;
+                    interactiveMeshes.push(child);
+                }
+            });
+        }
+
+        // --- 1. O CONTÊINER (ESTRUTURA PRINCIPAL E PAREDES) ---
+        const containerGroup = new THREE.Group();
+        stationGroup.add(containerGroup);
+
+        const cW = 10, cH = 6, cD = 5.2;
+
+        // Base & Teto
+        const cFloor = new THREE.Mesh(new THREE.BoxGeometry(cW, 0.16, cD), materials.metalMedium);
+        cFloor.position.set(0, 0.08, 0);
+        cFloor.receiveShadow = true;
+        cFloor.castShadow = true;
+        containerGroup.add(cFloor);
+
+        const cCeiling = new THREE.Mesh(new THREE.BoxGeometry(cW, 0.16, cD), materials.frame);
+        cCeiling.position.set(0, cH + 0.08, 0);
+        cCeiling.receiveShadow = true;
+        cCeiling.castShadow = true;
+        containerGroup.add(cCeiling);
+
+        // Paredes Laterais
+        const cWallL = new THREE.Mesh(new THREE.BoxGeometry(0.16, cH, cD), materials.frame);
+        cWallL.position.set(-cW/2, cH/2, 0);
+        cWallL.receiveShadow = true;
+        cWallL.castShadow = true;
+        containerGroup.add(cWallL);
+
+        const cWallR = new THREE.Mesh(new THREE.BoxGeometry(0.16, cH, cD), materials.frame);
+        cWallR.position.set(cW/2, cH/2, 0);
+        cWallR.receiveShadow = true;
+        cWallR.castShadow = true;
+        containerGroup.add(cWallR);
+
+        // Ripas de Madeira do Fundo (Realismo e Variação de Bege a Marrom)
+        const woodMaterials = [];
+        const woodTones = [0xdfb78c, 0xd0a97f, 0xc49c72, 0xb68e64, 0xcca377];
+        woodTones.forEach((color) => {
+            woodMaterials.push(new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.02 }));
+        });
+
+        const plankCount = 28;
+        const plankWidth = (cW - 0.3) / plankCount;
+        for (let i = 0; i < plankCount; i++) {
+            const plankH = cH - 0.1;
+            const plankGeo = new THREE.BoxGeometry(plankWidth - 0.02, plankH, 0.06);
+            const pMesh = new THREE.Mesh(plankGeo, woodMaterials[i % woodMaterials.length]);
+            pMesh.position.set(
+                -(cW/2 - 0.15) + (i * plankWidth) + plankWidth/2,
+                cH/2,
+                -(cD/2 - 0.08)
+            );
+            pMesh.receiveShadow = true;
+            pMesh.castShadow = true;
+            containerGroup.add(pMesh);
+        }
+
+        // Vigas e Molduras (Antracite)
+        const vigaH = new THREE.Mesh(new THREE.BoxGeometry(cW + 0.1, 0.24, 0.24), materials.frame);
+        vigaH.position.set(0, cH, cD/2);
+        vigaH.castShadow = true;
+        containerGroup.add(vigaH);
+
+        const vigaVL = new THREE.Mesh(new THREE.BoxGeometry(0.24, cH, 0.24), materials.frame);
+        vigaVL.position.set(-cW/2, cH/2, cD/2);
+        vigaVL.castShadow = true;
+        containerGroup.add(vigaVL);
+
+        const vigaVR = new THREE.Mesh(new THREE.BoxGeometry(0.24, cH, 0.24), materials.frame);
+        vigaVR.position.set(cW/2, cH/2, cD/2);
+        vigaVR.castShadow = true;
+        containerGroup.add(vigaVR);
+
+        // Detalhes da Aresta Frontal Verde Vibrante
+        const trimL = new THREE.Mesh(new THREE.BoxGeometry(0.04, cH, 0.04), materials.brandGreen);
+        trimL.position.set(-cW/2 + 0.13, cH/2, cD/2 + 0.13);
+        containerGroup.add(trimL);
+
+        const trimR = new THREE.Mesh(new THREE.BoxGeometry(0.04, cH, 0.04), materials.brandGreen);
+        trimR.position.set(cW/2 - 0.13, cH/2, cD/2 + 0.13);
+        containerGroup.add(trimR);
+
+        const trimT = new THREE.Mesh(new THREE.BoxGeometry(cW + 0.05, 0.04, 0.04), materials.brandGreen);
+        trimT.position.set(0, cH - 0.11, cD/2 + 0.13);
+        containerGroup.add(trimT);
+
+        // VENTILADORES INDUSTRIAIS ROTATIVOS (Detalhe mecânico no fundo)
+        const fan1 = new THREE.Group();
+        const fan2 = new THREE.Group();
+        const fans = [fan1, fan2];
+        const fanPositions = [-3.8, 1.2]; // Posições X no fundo
+
+        fans.forEach((fan, index) => {
+            fan.position.set(fanPositions[index], 5.0, -(cD/2 - 0.18));
+            containerGroup.add(fan);
+
+            // Carcaça circular do ventilador
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.05, 8, 24), materials.ironRod);
+            fan.add(ring);
+
+            // Grade de proteção
+            const cross1 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.02), materials.ironRod);
+            fan.add(cross1);
+            const cross2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.02), materials.ironRod);
+            cross2.rotation.z = Math.PI / 2;
+            fan.add(cross2);
+
+            // Hélice interna (Grupo que irá girar no update loop)
+            const blades = new THREE.Group();
+            blades.name = "blades";
+            blades.position.z = -0.05;
+            
+            const center = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06), materials.metalClean);
+            center.rotation.x = Math.PI / 2;
+            blades.add(center);
+
+            for (let b = 0; b < 4; b++) {
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.45, 0.01), materials.frame);
+                blade.position.y = 0.22;
+                blade.rotation.y = 0.25; // torcida
+                const bladeAnchor = new THREE.Group();
+                bladeAnchor.rotation.z = (b * Math.PI) / 2;
+                bladeAnchor.add(blade);
+                blades.add(bladeAnchor);
+            }
+            fan.add(blades);
+        });
+
+
+        // --- 2. LADO EXTERNO ESQUERDO (ENTRADA DE RESÍDUOS - CAÇAMBA DETALHADA) ---
+        const hopperGroup = new THREE.Group();
+        stationGroup.add(hopperGroup);
+        hopperGroup.position.set(-7.4, 0, 0.6);
+
+        // Suporte treliçado robusto
+        const supportAngles = [Math.PI/4, (3*Math.PI)/4, (5*Math.PI)/4, (7*Math.PI)/4];
+        supportAngles.forEach(angle => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6), materials.ironRod);
+            leg.position.set(Math.cos(angle) * 1.05, 1.25, Math.sin(angle) * 1.05);
+            // Angulação para fora das pernas
+            leg.rotation.z = Math.cos(angle) * 0.08;
+            leg.rotation.x = Math.sin(angle) * -0.08;
+            leg.castShadow = true;
+            hopperGroup.add(leg);
+        });
+
+        // Suporte diagonal em X
+        const diag1 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.06, 0.06), materials.ironRod);
+        diag1.position.set(0, 1.2, -1.02);
+        diag1.rotation.z = 0.85;
+        hopperGroup.add(diag1);
+        const diag2 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.06, 0.06), materials.ironRod);
+        diag2.position.set(0, 1.2, -1.02);
+        diag2.rotation.z = -0.85;
+        hopperGroup.add(diag2);
+
+        // Funil / Caçamba (Múltiplas camadas para detalhe óptico superior)
+        const mainCone = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.6, 0.9, 1.8, 8, 1, false),
+            materials.metalMedium
+        );
+        mainCone.position.set(0, 3.1, 0);
+        mainCone.castShadow = true;
+        mainCone.receiveShadow = true;
+        hopperGroup.add(mainCone);
+
+        // Borda e anéis verdes decorativos
+        const rimTop = new THREE.Mesh(new THREE.CylinderGeometry(1.68, 1.68, 0.16, 8), materials.brandGreen);
+        rimTop.position.set(0, 4.0, 0);
+        rimTop.castShadow = true;
+        hopperGroup.add(rimTop);
+
+        const midRing = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.08, 8), materials.brandGreen);
+        midRing.position.set(0, 3.1, 0);
+        hopperGroup.add(midRing);
+
+        // Tubulação de escoamento para o contêiner
+        const feedPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 2.0), materials.metalClean);
+        feedPipe.rotation.z = -Math.PI / 3;
+        feedPipe.position.set(1.0, 1.8, 0);
+        feedPipe.castShadow = true;
+        hopperGroup.add(feedPipe);
+
+        // Flange da junta do tubo
+        const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.12), materials.brandGreen);
+        flange.rotation.z = -Math.PI / 3;
+        flange.position.set(0.4, 2.15, 0);
+        hopperGroup.add(flange);
+
+        makeInteractive(hopperGroup, 'hopper');
+
+
+        // --- 3. PARTE SUPERIOR INTERNA (UNIDADE DE TRIAGEM IA + LASER DE VARREDURA) ---
+        const sortingGroup = new THREE.Group();
+        stationGroup.add(sortingGroup);
+        sortingGroup.position.set(0, 4.15, 0.2);
+
+        // Esteira transportadora
+        const beltMain = new THREE.Mesh(new THREE.BoxGeometry(9.4, 0.24, 1.2), materials.frame);
+        beltMain.position.y = 0.1;
+        beltMain.castShadow = true;
+        beltMain.receiveShadow = true;
+        sortingGroup.add(beltMain);
+
+        // Rolo e Mancal esquerdo
+        const mancalL = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 1.35, 16), materials.ironRod);
+        mancalL.rotation.x = Math.PI / 2;
+        mancalL.position.set(-4.6, 0.1, 0);
+        sortingGroup.add(mancalL);
+
+        // Motor elétrico da esteira (Detalhe mecânico)
+        const beltMotor = new THREE.Group();
+        beltMotor.position.set(4.6, 0.1, 0.85);
+        const mBody = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.5), materials.ironRod);
+        beltMotor.add(mBody);
+        const mCap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.1, 8), materials.brandGreen);
+        mCap.rotation.x = Math.PI / 2;
+        mCap.position.z = 0.26;
+        beltMotor.add(mCap);
+        sortingGroup.add(beltMotor);
+
+        // Grades verdes laterais
+        const sideGrateF = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.18, 0.06), materials.brandGreen);
+        sideGrateF.position.set(0, 0.24, 0.63);
+        sortingGroup.add(sideGrateF);
+
+        const sideGrateB = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.18, 0.06), materials.brandGreen);
+        sideGrateB.position.set(0, 0.24, -0.63);
+        sortingGroup.add(sideGrateB);
+
+        // Sensores no Teto e Estrutura Suspensa
+        const sensorRig = new THREE.Group();
+        sensorRig.position.set(0, 1.7, 0);
+
+        // Barra guia cromada
+        const chromeGuide = new THREE.Mesh(new THREE.BoxGeometry(7, 0.06, 0.06), materials.metalClean);
+        sensorRig.add(chromeGuide);
+
+        // Cabeçotes sensores
+        const sOffsets = [-2.4, 0, 2.4];
+        sOffsets.forEach((xPos, idx) => {
+            const scanner = new THREE.Group();
+            scanner.position.set(xPos, -0.3, 0);
+
+            // Suportes para trilho
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6), materials.ironRod);
+            arm.position.y = 0.3;
+            scanner.add(arm);
+
+            // Bloco do Sensor
+            const bodyBox = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.32, 0.44), materials.sensor);
+            bodyBox.castShadow = true;
+            scanner.add(bodyBox);
+
+            const whiteShield = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.3), materials.sensorWhite);
+            whiteShield.position.y = 0.13;
+            scanner.add(whiteShield);
+
+            // Lente óptica
+            const optic = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.08, 8), materials.metalClean);
+            optic.rotation.x = Math.PI / 2;
+            optic.position.set(0, -0.06, 0.21);
+            scanner.add(optic);
+
+            // LED
+            const led = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), idx === 1 ? materials.ledRed : materials.ledGreen);
+            led.position.set(0.12, 0.08, 0.21);
+            scanner.add(led);
+
+            sensorRig.add(scanner);
+        });
+
+        sortingGroup.add(sensorRig);
+
+        // Efeito Laser de IA (Cone translúcido oscilante no scanner central)
+        const laserGeo = new THREE.ConeGeometry(0.6, 1.4, 16, 1, true); // aberto embaixo
+        const laserMat = new THREE.MeshBasicMaterial({
+            color: 0x10b981,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide
+        });
+        const laserCone = new THREE.Mesh(laserGeo, laserMat);
+        laserCone.position.set(0, 0.8, 0);
+        laserCone.scale.set(1.0, 1.0, 0.15); // achatado na direção da esteira
+        sensorRig.add(laserCone);
+
+        makeInteractive(sortingGroup, 'sorting');
+
+
+        // --- 4. PARTE INFERIOR ESQUERDA/CENTRO (PROCESSAMENTO DE ORGÂNICO + SACO ESTOPA) ---
+        const organicGroup = new THREE.Group();
+        stationGroup.add(organicGroup);
+        organicGroup.position.set(-2.5, 0, 0.8);
+
+        // Máquina principal
+        const orgMachine = new THREE.Mesh(new THREE.BoxGeometry(1.7, 3.2, 1.7), materials.metalMedium);
+        orgMachine.position.y = 1.6;
+        orgMachine.castShadow = true;
+        orgMachine.receiveShadow = true;
+        organicGroup.add(orgMachine);
+
+        // Painel e arestas
+        const facePanel = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.08), materials.brandGreen);
+        facePanel.position.set(0, 2.2, 0.86);
+        facePanel.castShadow = true;
+        organicGroup.add(facePanel);
+
+        // Vidro de Inspeção redondo
+        const glassWindow = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.06, 16), new THREE.MeshStandardMaterial({
+            color: 0x059669,
+            roughness: 0.1,
+            metalness: 0.9,
+            transparent: true,
+            opacity: 0.6
+        }));
+        glassWindow.rotation.x = Math.PI / 2;
+        glassWindow.position.set(0, 2.2, 0.9);
+        organicGroup.add(glassWindow);
+
+        // Tubulações industriais metálicas traseiras (alimentando o sistema)
+        const copperPipeL = new THREE.Group();
+        const pCurve1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2), materials.copperPipe);
+        pCurve1.position.set(-0.6, 2.4, -1.1);
+        copperPipeL.add(pCurve1);
+        const pCurve2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2), materials.copperPipe);
+        pCurve2.rotation.x = Math.PI / 2;
+        pCurve2.position.set(-0.6, 3.0, -0.5);
+        copperPipeL.add(pCurve2);
+        organicGroup.add(copperPipeL);
+
+        // Tubo de alimentação vertical
+        const verticalFeed = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.22, 1.4), materials.metalClean);
+        verticalFeed.position.set(0.1, 3.5, -0.2);
+        verticalFeed.rotation.z = 0.15;
+        verticalFeed.castShadow = true;
+        organicGroup.add(verticalFeed);
+
+        // O SACO DE ESTOPA (Deformado e texturizado proceduralmente)
+        const sackGroup = new THREE.Group();
+        sackGroup.position.set(0, 0, 0.8);
+
+        const sackGeo = new THREE.CylinderGeometry(0.56, 0.64, 1.05, 14, 6);
+        const sPos = sackGeo.attributes.position;
+        for (let i = 0; i < sPos.count; i++) {
+            let x = sPos.getX(i);
+            let y = sPos.getY(i);
+            let z = sPos.getZ(i);
+            
+            // Deformações orgânicas suaves no saco
+            if (y > -0.4 && y < 0.4) {
+                const ang = Math.atan2(z, x);
+                const noise = 1.0 + Math.cos(y * 4.5 + ang * 3.5) * 0.14 + Math.sin(ang * 2) * 0.06;
+                sPos.setX(i, x * noise);
+                sPos.setZ(i, z * noise);
+            }
+        }
+        sackGeo.computeVertexNormals();
+
+        const sack = new THREE.Mesh(sackGeo, materials.sack);
+        sack.position.y = 0.525;
+        sack.castShadow = true;
+        sack.receiveShadow = true;
+        sackGroup.add(sack);
+
+        // Fechamento e amarração
+        const topFold = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.5, 0.16, 12), materials.sack);
+        topFold.position.y = 1.1;
+        sackGroup.add(topFold);
+
+        const stringTie = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.035, 6, 16), materials.ironRod);
+        stringTie.rotation.x = Math.PI / 2;
+        stringTie.position.y = 1.06;
+        sackGroup.add(stringTie);
+
+        organicGroup.add(sackGroup);
+
+        makeInteractive(organicGroup, 'organic');
+
+
+        // --- 5. PARTE INFERIOR DIREITA (MÁQUINA DE BLOCOS + PRENSA HIDRÁULICA ATIVA) ---
+        const pressGroup = new THREE.Group();
+        stationGroup.add(pressGroup);
+        pressGroup.position.set(2.5, 0, 0.6);
+
+        // Chassi principal (Verde escuro)
+        const frameMachine = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.2, 1.5), materials.brandGreenDark);
+        frameMachine.position.y = 1.1;
+        frameMachine.castShadow = true;
+        frameMachine.receiveShadow = true;
+        pressGroup.add(frameMachine);
+
+        // Funil receptor cinza
+        const inputHopper = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.35, 0.8, 8), materials.metalClean);
+        inputHopper.position.set(-0.15, 2.5, 0);
+        inputHopper.castShadow = true;
+        pressGroup.add(inputHopper);
+
+        // Detalhes da prensa: Manômetro
+        const gaugeBox = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.1), materials.frame);
+        gaugeBox.position.set(-0.6, 1.6, 0.76);
+        const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 12), materials.sensorWhite);
+        dial.rotation.x = Math.PI / 2;
+        dial.position.set(-0.6, 1.6, 0.82);
+        pressGroup.add(gaugeBox);
+        pressGroup.add(dial);
+
+        // Agulha do manômetro (detalhe)
+        const needle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.01), materials.ledRed);
+        needle.position.set(-0.6, 1.6, 0.85);
+        needle.rotation.z = 0.5;
+        pressGroup.add(needle);
+
+        // Prensa e Pistão móvel (Grupo animado no loop)
+        const pistonSubGroup = new THREE.Group();
+        pistonSubGroup.name = "pistonGroup";
+        pistonSubGroup.position.set(0.15, 1.7, 0);
+
+        const metalRod = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0), materials.metalClean);
+        metalRod.position.y = 0.5;
+        pistonSubGroup.add(metalRod);
+
+        const pressPlate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.15, 0.9), materials.metalClean);
+        pressPlate.position.y = 0.0;
+        pressPlate.castShadow = true;
+        pistonSubGroup.add(pressPlate);
+
+        pressGroup.add(pistonSubGroup);
+
+        // Rampa metálica de saída
+        const exitSlide = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.9), materials.metalMedium);
+        exitSlide.rotation.x = 0.35;
+        exitSlide.position.set(0.7, 0.45, 0.65);
+        exitSlide.castShadow = true;
+        pressGroup.add(exitSlide);
+
+        makeInteractive(pressGroup, 'blocks-machine');
+
+
+        // --- 5B. PALETE E PILHA DE BLOCOS ECOLÓGICOS DETALHADOS ---
+        const blocksStackGroup = new THREE.Group();
+        stationGroup.add(blocksStackGroup);
+        blocksStackGroup.position.set(4.0, 0, 1.4);
+
+        // Palete de Madeira (Caixas finas que formam o suporte)
+        const pallet = new THREE.Group();
+        // Travessas inferiores do pallet
+        const trayL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.2), materials.woodPallet);
+        trayL.position.set(-0.5, 0.04, 0);
+        pallet.add(trayL);
+        const trayR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.2), materials.woodPallet);
+        trayR.position.set(0.5, 0.04, 0);
+        pallet.add(trayR);
+        const trayM = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.2), materials.woodPallet);
+        trayM.position.set(0, 0.04, 0);
+        pallet.add(trayM);
+
+        // Ripas horizontais superiores do pallet
+        for(let r = 0; r < 5; r++) {
+            const ripa = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.03, 0.12), materials.woodPallet);
+            ripa.position.set(0, 0.095, -0.5 + r * 0.25);
+            ripa.castShadow = true;
+            pallet.add(ripa);
+        }
+        blocksStackGroup.add(pallet);
+
+        // Blocos ecológicos (Bordas chanfradas e tons realistas)
+        const bW = 0.5, bH = 0.32, bD = 0.32;
+        const blockGeo = new THREE.BoxGeometry(bW - 0.02, bH - 0.02, bD - 0.02);
+
+        // Empilhamento realístico imperfeito
+        const sCfg = [
+            // Base
+            { x: -0.27, y: 0.12 + bH/2, z: -0.26, rx: 0.01, ry: 0.03, rz: 0 },
+            { x: 0.26, y: 0.12 + bH/2, z: -0.28, rx: -0.02, ry: -0.02, rz: 0.01 },
+            { x: -0.28, y: 0.12 + bH/2, z: 0.25, rx: 0.02, ry: -0.04, rz: -0.01 },
+            { x: 0.27, y: 0.12 + bH/2, z: 0.27, rx: 0.01, ry: 0.02, rz: 0.03 },
+            // Nível 2
+            { x: -0.25, y: 0.12 + bH + bH/2, z: -0.25, rx: -0.01, ry: -0.02, rz: 0 },
+            { x: 0.26, y: 0.12 + bH + bH/2, z: -0.24, rx: 0.02, ry: 0.04, rz: -0.02 },
+            { x: 0.0, y: 0.12 + bH + bH/2, z: 0.26, rx: -0.01, ry: -0.01, rz: 0.02 },
+            // Nível 3 (Topo)
+            { x: -0.12, y: 0.12 + (bH*2) + bH/2, z: -0.23, rx: 0.03, ry: 0.05, rz: -0.01 },
+            { x: 0.14, y: 0.12 + (bH*2) + bH/2, z: 0.02, rx: -0.02, ry: -0.05, rz: 0.01 }
+        ];
+
+        sCfg.forEach(cfg => {
+            const blk = new THREE.Mesh(blockGeo, materials.block);
+            blk.position.set(cfg.x, cfg.y, cfg.z);
+            blk.rotation.set(cfg.rx, cfg.ry, cfg.rz);
+            blk.castShadow = true;
+            blk.receiveShadow = true;
+            blocksStackGroup.add(blk);
+        });
+
+        makeInteractive(blocksStackGroup, 'blocks-stack');
+
+
+        // --- 6. PAREDE INTERNA DIREITA (PAINEL DIGITAL ESG CANVAS AVANÇADO) ---
+        const monitorGroup = new THREE.Group();
+        stationGroup.add(monitorGroup);
+        monitorGroup.position.set(3.4, 3.1, -2.4);
+
+        // Moldura
+        const monitorFrame = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.5, 0.08), materials.frame);
+        monitorFrame.castShadow = true;
+        monitorGroup.add(monitorFrame);
+
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.15), materials.ironRod);
+        bracket.position.set(0, 0, -0.08);
+        monitorGroup.add(bracket);
+
+        // Canvas e textura do display
+        const displayCanvas = document.createElement('canvas');
+        displayCanvas.width = 512;
+        displayCanvas.height = 384;
+        const dCtx = displayCanvas.getContext('2d');
+
+        const monitorTexture = new THREE.CanvasTexture(displayCanvas);
+        const displayMat = new THREE.MeshStandardMaterial({
+            map: monitorTexture,
+            emissive: 0x10b981,
+            emissiveMap: monitorTexture,
+            emissiveIntensity: 0.7,
+            roughness: 0.1,
+            metalness: 0.9
+        });
+
+        const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.4), displayMat);
+        displayMesh.position.set(0, 0, 0.045);
+        monitorGroup.add(displayMesh);
+
+        function updateMonitorCanvas() {
+            if (!dCtx) return;
+
+            const t = Date.now() * 0.001;
+
+            // Fundo cibernético
+            dCtx.fillStyle = '#060810';
+            dCtx.fillRect(0, 0, 512, 384);
+
+            // Grelha
+            dCtx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
+            dCtx.lineWidth = 1;
+            for(let x = 0; x < 512; x += 32) {
+                dCtx.beginPath(); dCtx.moveTo(x, 0); dCtx.lineTo(x, 384); dCtx.stroke();
+            }
+            for(let y = 0; y < 384; y += 32) {
+                dCtx.beginPath(); dCtx.moveTo(0, y); dCtx.lineTo(512, y); dCtx.stroke();
+            }
+
+            // Contorno ativo
+            dCtx.strokeStyle = '#10b981';
+            dCtx.lineWidth = 4;
+            dCtx.strokeRect(6, 6, 500, 372);
+
+            // Cabeçalhos
+            dCtx.fillStyle = '#10b981';
+            dCtx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+            dCtx.fillText('OMNIVERDE OS v1.0', 28, 44);
+
+            dCtx.fillStyle = 'rgba(16, 185, 129, 0.35)';
+            dCtx.fillRect(28, 56, 456, 2);
+
+            // Estatísticas
+            dCtx.fillStyle = '#ffffff';
+            dCtx.font = '16px "Plus Jakarta Sans", sans-serif';
+            dCtx.fillText('STATUS DO SISTEMA:', 28, 92);
+            dCtx.fillStyle = '#34d399';
+            dCtx.fillText('CONEXÃO SEGURA - ON', 210, 92);
+
+            const rpm = (320 + Math.sin(t * 4) * 8).toFixed(0);
+            const co2 = (14.24 + Math.sin(t * 0.2) * 0.08).toFixed(2);
+            const pbar = (6.2 + Math.cos(t * 1.5) * 0.3).toFixed(1);
+
+            dCtx.fillStyle = '#94a3b8';
+            dCtx.fillText('ROTAÇÃO VENTILADOR:', 28, 132);
+            dCtx.fillStyle = '#ffffff';
+            dCtx.fillText(`${rpm} RPM`, 210, 132);
+
+            dCtx.fillStyle = '#94a3b8';
+            dCtx.fillText('ACÚMULO CARBONO:', 28, 172);
+            dCtx.fillStyle = '#ffffff';
+            dCtx.fillText(`${co2} tCO2eq`, 210, 172);
+
+            dCtx.fillStyle = '#94a3b8';
+            dCtx.fillText('PRENSA HIDRÁULICA:', 28, 212);
+            dCtx.fillStyle = '#34d399';
+            dCtx.fillText(`${pbar} BAR`, 210, 212);
+
+            // Gráfico de Barras Decorativo
+            dCtx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+            dCtx.fillRect(28, 240, 456, 60);
+
+            dCtx.fillStyle = '#10b981';
+            for (let i = 0; i < 20; i++) {
+                const hVal = 20 + Math.sin(t * 3 + i * 0.5) * 15 + Math.cos(i * 0.8) * 8;
+                dCtx.fillRect(36 + i * 22, 300 - hVal, 12, hVal);
+            }
+
+            // Rodapé piscante
+            if (Math.floor(t * 2) % 2 === 0) {
+                dCtx.fillStyle = '#10b981';
+                dCtx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                dCtx.fillText('● PROCESSAMENTO EM TEMPO REAL SENSOR IA', 28, 344);
+            }
+
+            monitorTexture.needsUpdate = true;
+        }
+
+
+        // --- PARTÍCULAS VOLUMÉTRICAS (EFEITO POEIRA EM SUSPENSÃO) ---
+        const particleCount = 180;
+        const particleGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const velocities = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            // Posiciona as partículas flutuando dentro do volume do contêiner
+            positions[i * 3] = (Math.random() - 0.5) * 12;
+            positions[i * 3 + 1] = Math.random() * 6;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 5;
+
+            velocities.push({
+                x: (Math.random() - 0.5) * 0.005,
+                y: (Math.random() * 0.003) + 0.001,
+                z: (Math.random() - 0.5) * 0.005
+            });
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({
+            color: 0x34d399,
+            size: 0.04,
+            transparent: true,
+            opacity: 0.65,
+            blending: THREE.AdditiveBlending
+        });
+
+        const dustParticles = new THREE.Points(particleGeo, particleMat);
+        scene.add(dustParticles);
+
+
+        // --- MICRO-RESÍDUOS NA ESTEIRA ---
+        const debrisGroup = new THREE.Group();
+        sortingGroup.add(debrisGroup);
+
+        const dColors = [0x3b82f6, 0xef4444, 0xf59e0b, 0xa855f7, 0x10b981];
+        const debrisItems = [];
+        const numDebris = 7;
+
+        for(let i = 0; i < numDebris; i++) {
+            const size = 0.14 + Math.random() * 0.14;
+            let geo;
+            const rVal = Math.random();
+            if (rVal < 0.35) {
+                // Caixa de papelão
+                geo = new THREE.BoxGeometry(size * 1.2, size, size);
+            } else if (rVal < 0.7) {
+                // Garrafa plástica
+                geo = new THREE.CylinderGeometry(size/3, size/3, size * 1.5, 8);
+            } else {
+                // Fragmento geral
+                geo = new THREE.DodecahedronGeometry(size/2);
+            }
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: dColors[Math.floor(Math.random() * dColors.length)],
+                roughness: 0.4,
+                metalness: 0.3
+            });
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            mesh.position.set(-4.2 + i * 1.3, 0.3, 0);
+            debrisGroup.add(mesh);
+            debrisItems.push(mesh);
+        }
+
+
+        // --- ANIMAÇÃO E TRANSIÇÃO DE CÂMERA ---
+        let cameraTweening = false;
+
+        function animateCamera(targetPos, targetLookAt) {
+            if (cameraTweening) return;
+            cameraTweening = true;
+            controls.enabled = false;
+
+            new TWEEN.Tween(camera.position)
+                .to(targetPos, 1400)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .start();
+
+            new TWEEN.Tween(controls.target)
+                .to(targetLookAt, 1400)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .onComplete(() => {
+                    controls.enabled = true;
+                    cameraTweening = false;
+                })
+                .start();
+        }
+
+        // Evento Botão Reset
+        document.getElementById('reset-camera-btn').addEventListener('click', () => {
+            animateCamera(defaultCamPos, defaultLookAt);
+
+            const card = document.getElementById('info-card');
+            card.classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('info-tag').innerText = 'Status Operacional';
+                document.getElementById('info-header').innerText = 'Monitor da Estação';
+                document.getElementById('info-desc').innerText = 'Clique nos componentes mecânicos ativos na cena 3D para focar a câmera no setor operacional e ler o relatório técnico de processos da planta.';
+                card.classList.add('active');
+            }, 300);
+        });
+
+
+        // --- RAYCASTER (HOVER & SELEÇÃO) ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let currentHover = null;
+        let originalEmissive = new Map();
+
+        interactiveMeshes.forEach(mesh => {
+            originalEmissive.set(mesh.uuid, {
+                color: mesh.material.emissive ? mesh.material.emissive.clone() : new THREE.Color(0,0,0),
+                intensity: mesh.material.emissiveIntensity || 0
+            });
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveMeshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const mKey = hit.userData.moduleKey;
+
+                if (MODULE_INFO[mKey]) {
+                    tooltip.innerText = MODULE_INFO[mKey].title;
+                    tooltip.style.left = (event.clientX + 16) + 'px';
+                    tooltip.style.top = (event.clientY + 16) + 'px';
+                    tooltip.style.opacity = '1';
+                }
+
+                if (currentHover !== hit) {
+                    clearHover();
+                    currentHover = hit;
+                    document.body.style.cursor = 'pointer';
+
+                    interactiveMeshes.forEach(m => {
+                        if (m.userData.moduleKey === mKey) {
+                            if (m.material.emissive) {
+                                m.material.emissive.setHex(0x10b981);
+                                m.material.emissiveIntensity = 0.45;
+                            }
+                        }
+                    });
+                }
+            } else {
+                clearHover();
+                tooltip.style.opacity = '0';
+            }
+        });
+
+        window.addEventListener('click', () => {
+            if (cameraTweening) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveMeshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const mKey = hit.userData.moduleKey;
+                const info = MODULE_INFO[mKey];
+
+                if (info) {
+                    animateCamera(info.cameraPos, info.lookAt);
+
+                    const card = document.getElementById('info-card');
+                    card.classList.remove('active');
+
+                    setTimeout(() => {
+                        document.getElementById('info-tag').innerText = info.tag;
+                        document.getElementById('info-header').innerText = info.title;
+                        document.getElementById('info-desc').innerText = info.desc;
+                        card.classList.add('active');
+                    }, 250);
+                }
+            }
+        });
+
+        function clearHover() {
+            if (currentHover) {
+                const mKey = currentHover.userData.moduleKey;
+                interactiveMeshes.forEach(m => {
+                    if (m.userData.moduleKey === mKey) {
+                        const orig = originalEmissive.get(m.uuid);
+                        if (orig && m.material.emissive) {
+                            m.material.emissive.copy(orig.color);
+                            m.material.emissiveIntensity = orig.intensity;
+                        }
+                    }
+                });
+                currentHover = null;
+                document.body.style.cursor = 'default';
+            }
+        }
+
+
+        // --- LOOP DE ANIMAÇÃO GERAL ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            TWEEN.update();
+            controls.update();
+
+            const elapsed = clock.getElapsedTime();
+
+            // 1. Atualizar display ESG
+            updateMonitorCanvas();
+
+            // 2. Girar hélices dos ventiladores industriais
+            const fanBladeSpeed = 6.0;
+            fan1.getObjectByName("blades").rotation.z += 0.05 * fanBladeSpeed;
+            fan2.getObjectByName("blades").rotation.z += 0.05 * fanBladeSpeed;
+
+            // 3. Mover resíduos na esteira
+            debrisItems.forEach((debris, index) => {
+                debris.position.x += 0.016;
+                debris.rotation.x += 0.008 * (index + 1);
+                debris.rotation.y += 0.006;
+
+                // Se o resíduo estiver passando abaixo do scanner central (X = 0), aciona pulso visual
+                if (Math.abs(debris.position.x) < 0.15) {
+                    laserCone.material.opacity = 0.55;
+                }
+
+                if (debris.position.x > 4.4) {
+                    debris.position.x = -4.3;
+                    debris.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+                }
+            });
+
+            // 4. Pulsação do laser verde de triagem IA
+            laserCone.material.opacity = 0.25 + Math.sin(elapsed * 12) * 0.15;
+            laserCone.rotation.y += 0.005;
+
+            // 5. Ciclo ativo da Prensa Hidráulica (Sobe/Desce senoidal com compressão rápida)
+            const piston = pressGroup.getObjectByName("pistonGroup");
+            if (piston) {
+                // Simula ciclo hidráulico: compressão rápida e retorno lento
+                const pressCycle = (elapsed * 0.6) % Math.PI;
+                let stroke = Math.sin(pressCycle);
+                if (stroke > 0.8) {
+                    stroke = 0.8 + (stroke - 0.8) * 0.1; // achata no fundo do ciclo
+                }
+                // Modula o deslocamento vertical do pistão
+                piston.position.y = 1.7 - (stroke * 0.85);
+
+                // Vibração sutil da agulha de manômetro proporcional à compressão
+                needle.rotation.z = 0.45 + (stroke * 1.3) + (Math.sin(elapsed * 50) * 0.05 * stroke);
+            }
+
+            // 6. Flutuação suave e regeneração das partículas de poeira
+            const posAttr = particleGeo.attributes.position;
+            for (let i = 0; i < particleCount; i++) {
+                let px = posAttr.getX(i);
+                let py = posAttr.getY(i);
+                let pz = posAttr.getZ(i);
+
+                // Aplica velocidade
+                px += velocities[i].x;
+                py += velocities[i].y;
+                pz += velocities[i].z;
+
+                // Reset de limites se sair do contêiner
+                if (py > 6.0) {
+                    py = 0.05;
+                    px = (Math.random() - 0.5) * 12;
+                    pz = (Math.random() - 0.5) * 5;
+                }
+
+                posAttr.setX(i, px);
+                posAttr.setY(i, py);
+                posAttr.setZ(i, pz);
+            }
+            posAttr.needsUpdate = true;
+
+            // 7. Respiração sutil dos LEDs verdes
+            const pulse = 0.08 + Math.sin(elapsed * 3) * 0.05;
+            materials.brandGreen.emissiveIntensity = pulse;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+
+        // --- REDIMENSIONAMENTO ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
